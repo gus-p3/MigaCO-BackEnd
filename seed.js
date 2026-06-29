@@ -1,5 +1,11 @@
 const mongoose = require("mongoose");
 const Producto = require("./src/models/Producto");
+const Usuario = require("./src/models/Usuario");
+const Carrito = require("./src/models/Carrito");
+const Pedido = require("./src/models/Pedido");
+const Resena = require("./src/models/Resena");
+const Personalizacion = require("./src/models/Personalizacion");
+const bcrypt = require("bcryptjs");
 require("dotenv").config();
 
 const productosIniciales = [
@@ -867,20 +873,68 @@ const productosIniciales = [
 
 const seedDB = async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
     console.log("✅ Conectado a MongoDB");
 
-    // Limpiar colección
+    // Limpiar colecciones
     await Producto.deleteMany({});
     console.log("🗑️  Productos anteriores eliminados");
+
+    await Usuario.deleteMany({});
+    console.log("🗑️  Usuarios anteriores eliminados");
+
+    await Carrito.deleteMany({});
+    console.log("🗑️  Carritos anteriores eliminados");
+
+    await Pedido.deleteMany({});
+    console.log("🗑️  Pedidos anteriores eliminados");
+
+    await Resena.deleteMany({});
+    console.log("🗑️  Reseñas anteriores eliminadas");
+
+    await Personalizacion.deleteMany({});
+    console.log("🗑️  Personalizaciones anteriores eliminadas");
 
     // Insertar nuevos productos
     const resultado = await Producto.insertMany(productosIniciales);
     console.log(`✅ ${resultado.length} productos insertados correctamente`);
 
+    // Crear usuarios de prueba con contraseñas encriptadas
+    const salt = await bcrypt.genSalt(10);
+    const adminPasswordHash = await bcrypt.hash("adminpassword123", salt);
+    const userPasswordHash = await bcrypt.hash("userpassword123", salt);
+
+    const usuariosIniciales = [
+      {
+        nombre: "Admin Miga-Co",
+        email: "admin@migaco.com",
+        password_hash: adminPasswordHash,
+        role: "admin",
+        dos_factor: {
+          activo: false,
+          codigo_temp: null,
+          codigo_expira: null
+        }
+      },
+      {
+        nombre: "Usuario Demo",
+        email: "user@migaco.com",
+        password_hash: userPasswordHash,
+        role: "user",
+        dos_factor: {
+          activo: false,
+          codigo_temp: null,
+          codigo_expira: null
+        }
+      }
+    ];
+
+    const usuariosInsertados = await Usuario.insertMany(usuariosIniciales);
+    console.log(`✅ ${usuariosInsertados.length} usuarios de prueba creados (admin@migaco.com y user@migaco.com)`);
+
     process.exit(0);
   } catch (error) {
-    console.error("❌ Error:", error);
+    console.error("❌ Error al inicializar la base de datos:", error);
     process.exit(1);
   }
 };

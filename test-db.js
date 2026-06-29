@@ -4,7 +4,7 @@ const mongoose = require('mongoose');
 
 async function testConnection() {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
+    await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
     console.log('✅ Conexión exitosa!');
     
     // Probar un modelo simple
