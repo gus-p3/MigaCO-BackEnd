@@ -4,8 +4,9 @@ require('dotenv').config();
 
 (async () => {
   try {
-    await mongoose.connect(process.env.MONGODB_URI);
-    console.log('Conectado a MongoDB:', process.env.MONGODB_URI);
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    await mongoose.connect(uri);
+    console.log('Conectado a MongoDB:', uri);
 
     const productos = await Producto.find({}).limit(10).lean();
     console.log(`Encontrados ${productos.length} productos. Mostrando fichas sensoriales:`);
