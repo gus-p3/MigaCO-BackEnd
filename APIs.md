@@ -1,6 +1,6 @@
 # Integración de APIs de Terceros — Miga Co. Backend
 
-Este documento detalla la integración del servicio de terceros utilizado en el backend de **Miga Co.**, incluyendo los archivos de configuración, rutas, controladores y servicios involucrados en su flujo.
+Este documento detalla la integración de la API de Brevo en el backend de **Miga Co.**, incluyendo los archivos de configuración, rutas, controladores, servicios y la evidencia visual de consumo de cada flujo en Postman, el correo recibido, el frontend y la consola de logs.
 
 ---
 
@@ -23,91 +23,87 @@ La API resuelve dos flujos fundamentales de seguridad y soporte para el usuario 
 
 ---
 
-## 3. Implementación y Flujo Técnico (¿Cómo se utiliza?)
+## 3. Inicialización del Servidor y Conexión
 
-### Configuración del Entorno (`.env`)
-Las credenciales necesarias se encuentran en el archivo [.env del backend](file:///c:/Users/brand/Documentos/GIDS6092/Desarrollo%20Web/Migaco/Miga-Co_BackEnd/.env):
-* `BREVO_API_KEY`: API Key estática de autenticación.
-* `BREVO_SENDER_EMAIL`: Correo emisor autorizado en Brevo (`karenpadron0608@gmail.com`).
-* `BREVO_SENDER_NAME`: Nombre del emisor visible para los clientes (`Miga-Co`).
+Al iniciar el backend, se realiza la conexión a MongoDB y se inicializan las rutas.
 
-### Arquitectura de Archivos y Funciones
-
-El flujo de integración está estructurado de la siguiente manera:
-
-```mermaid
-graph TD
-    A[Petición del Cliente / Frontend] -->|HTTP POST| B[Rutas: auth.routes.js]
-    B --> C[Controlador: auth.controller.js]
-    C -->|Invoca| D[Servicio: auth.service.js]
-    D -->|axios.post con api-key| E[API de Brevo]
-```
-
-#### A. Definición de Rutas
-En el archivo [auth.routes.js](file:///c:/Users/brand/Documentos/GIDS6092/Desarrollo%20Web/Migaco/Miga-Co_BackEnd/src/routes/auth.routes.js):
-* `POST /login`: Ruta encargada del inicio de sesión (dispara el código 2FA si está configurado).
-* `POST /recuperar`: Ruta encargada de recibir la solicitud de recuperación de contraseña.
-
-#### B. Capa de Controladores
-En el archivo [auth.controller.js](file:///c:/Users/brand/Documentos/GIDS6092/Desarrollo%20Web/Migaco/Miga-Co_BackEnd/src/controllers/auth.controller.js):
-* `async login(req, res)`: Valida credenciales e invoca el servicio de login.
-* `async solicitarRecuperacion(req, res)`: Recibe el correo electrónico del cliente e invoca el servicio de recuperación.
-
-#### C. Capa de Servicios (Consumo de la API)
-En el archivo [auth.service.js](file:///c:/Users/brand/Documentos/GIDS6092/Desarrollo%20Web/Migaco/Miga-Co_BackEnd/src/services/auth.service.js) es donde reside el consumo directo de la API:
-* **Función `enviarEmail(destinatario, asunto, html)`**:
-  * Realiza una petición `POST` usando `axios` a `https://api.brevo.com/v3/smtp/email`.
-  * Envía el header de autenticación `'api-key': process.env.BREVO_API_KEY`.
-  * Registra en consola el ID de respuesta exitoso: `console.log('✅ Email enviado:', response.data.messageId);`.
-* **Función `login(email, password)`**:
-  * Verifica si el usuario tiene el doble factor activo, genera un código temporal de 6 dígitos con vigencia de 10 minutos y lo almacena.
-  * Llama a `enviarEmail` enviando la plantilla HTML del código OTP.
-* **Función `solicitarRecuperacion(email)`**:
-  * Busca al usuario por email, genera un código de recuperación temporal y lo almacena.
-  * Llama a `enviarEmail` enviando la plantilla HTML correspondiente.
+**Evidencia: Servidor corriendo y Base de Datos conectada:**
+![Terminal - Servidor Inicializado](photos/console_server_started.jpeg)
 
 ---
 
-## 4. Evidencia de Integración y Respuestas
+## 4. Flujo de Autenticación de Dos Factores (2FA)
 
-### Estructura de la Petición JSON (Payload a Brevo)
-```json
-{
-  "sender": {
-    "email": "karenpadron0608@gmail.com",
-    "name": "Miga-Co 🎂"
-  },
-  "to": [
-    {
-      "email": "correo-cliente@gmail.com"
-    }
-  ],
-  "subject": "Tu código de acceso — Miga-Co",
-  "htmlContent": "HTML estructurado con el diseño de Miga-Co y el código temporal."
-}
-```
+### Paso A: Inicio de Sesión e Identificación de Cuenta
+El usuario accede a la pantalla de login del frontend para ingresar sus datos.
+![Frontend - Login y link de olvido](photos/frontend_login_forgot_password.jpeg)
 
-### Respuesta de Éxito de la API de Brevo
-Cuando la llamada HTTP es correcta, Brevo responde con estado `201 Created` y el identificador del mensaje:
-```json
-{
-  "messageId": "<202606300047.123456789@smtp-relay.mailin.fr>"
-}
-```
+### Paso B: Login y requerimiento de 2FA
+Al enviar las credenciales, el backend valida que la cuenta requiere verificación y le indica al frontend que debe ingresar un código OTP.
+* **Método**: `POST`
+* **Ruta**: `/api/auth/login`
+![Postman - Login requiere 2FA](photos/postman_login_2fa_required.png)
 
-### Logs de la Consola del Servidor (Evidencia Backend)
-```bash
-[nodemon] starting `node server.js`
-Servidor corriendo en http://localhost:3000
-✅ MongoDB Conectado: 127.0.0.1
-✅ Rutas configuradas después de la conexión a DB
+### Paso C: Recepción del Código OTP en el Correo (Enviado por Brevo)
+El usuario recibe en su bandeja de entrada el correo electrónico con el código numérico de acceso.
+![Email - Código 2FA Recibido](photos/email_2fa_code.png)
 
-✅ Email enviado: <202606300047.123456789@smtp-relay.mailin.fr>
-```
+### Paso D: Pantalla de Verificación en el Frontend
+La interfaz del frontend solicita al usuario que ingrese el código OTP que acaba de recibir por correo.
+![Frontend - Pantalla de Código 2FA](photos/frontend_2fa_verification.jpeg)
+
+### Paso E: Verificación del Código OTP
+Se envía el código recibido para completar el proceso de inicio de sesión y obtener el token JWT de acceso definitivo.
+* **Método**: `POST`
+* **Ruta**: `/api/auth/2fa/verificar`
+![Postman - Verificación 2FA Exitosa](photos/postman_verify_2fa_success.png)
 
 ---
 
-## 5. Pros y Contras de la Integración
+## 5. Flujo de Recuperación de Contraseña
+
+### Paso A: Pantalla de Solicitud de Recuperación en el Frontend
+El usuario que ha olvidado su contraseña ingresa su correo electrónico para iniciar el proceso de restauración.
+![Frontend - Pantalla de solicitud de recuperación](photos/frontend_recovery_request_typo.jpeg)
+
+### Paso B: Solicitud de Recuperación
+El backend procesa la petición y llama a la API de Brevo para mandar el código de recuperación si el correo electrónico existe en el sistema.
+* **Método**: `POST`
+* **Ruta**: `/api/auth/recuperar`
+![Postman - Solicitud de Recuperación](photos/postman_recovery_request.png)
+
+### Paso C: Recepción del Correo de Recuperación (Enviado por Brevo)
+El usuario recibe en su correo el código temporal de un solo uso para restablecer su contraseña.
+![Email - Código de recuperación](photos/email_recovery_code.png)
+
+### Paso D: Pantalla de Ingreso de Código en el Frontend
+La interfaz del frontend le solicita al usuario que introduzca el código de seguridad de recuperación de contraseña.
+![Frontend - Pantalla de código de recuperación](photos/frontend_recovery_code_input.png)
+
+### Paso E: Verificación del Código de Recuperación
+El código introducido se valida en el servidor, retornando un `reset_token` temporal para autorizar el cambio de contraseña.
+* **Método**: `POST`
+* **Ruta**: `/api/auth/recuperar/verificar`
+![Postman - Verificación de código de recuperación](photos/postman_verify_recovery_code_success.png)
+
+### Paso F: Establecer Nueva Contraseña
+Se envía la nueva contraseña junto con el `reset_token` para actualizar las credenciales de forma definitiva en la base de datos.
+* **Método**: `POST`
+* **Ruta**: `/api/auth/recuperar/cambiar`
+![Postman - Cambio de contraseña exitoso](photos/postman_change_password_success.png)
+
+---
+
+## 6. Evidencia de Logs en la Consola del Servidor
+
+Cuando los correos electrónicos se envían exitosamente a través de la integración de Brevo, el servidor imprime en consola el registro correspondiente con el ID de mensaje devuelto por la API externa:
+
+**Evidencia de logs en consola:**
+![Terminal - Consola con logs de correos enviados](photos/console_logs_emails_sent.png)
+
+---
+
+## 7. Pros y Contras de la Integración
 
 ### Pros:
 * **Funciona en Producción (Diferencia clave con Nodemailer/SMTP personal)**: A diferencia de utilizar `nodemailer` configurado con cuentas personales (como Gmail), que suelen fallar en producción debido a los bloqueos de seguridad de Google, autenticación obligatoria por app y restricciones de IP, la API de Brevo está diseñada específicamente para producción, garantizando una alta tasa de entregabilidad y evitando que los correos terminen en la bandeja de Spam.
@@ -118,4 +114,3 @@ Servidor corriendo en http://localhost:3000
 ### Contras:
 * **Límite de Envío**: Si se excede el límite de 300 correos diarios en la capa gratuita, el servicio requiere de un plan de pago.
 * **Dependencia Externa**: Si el servicio de Brevo experimenta una caída en sus servidores, funciones clave como el inicio de sesión 2FA y la recuperación de contraseñas no estarán disponibles momentáneamente.
-
