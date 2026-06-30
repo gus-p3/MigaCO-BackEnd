@@ -1,6 +1,6 @@
 # Integración de APIs de Terceros — Miga Co. Backend
 
-Este documento detalla la integración del servicio de terceros utilizado en el backend de **Miga Co.**, incluyendo los archivos de configuración, rutas, controladores, servicios y la evidencia visual de consumo de cada flujo en Postman, correo recibido y consola de logs.
+Este documento detalla la integración de la API de Brevo en el backend de **Miga Co.**, incluyendo los archivos de configuración, rutas, controladores, servicios y la evidencia visual de consumo de cada flujo en Postman, el correo recibido, el frontend y la consola de logs.
 
 ---
 
@@ -23,98 +23,83 @@ La API resuelve dos flujos fundamentales de seguridad y soporte para el usuario 
 
 ---
 
-## 3. Inicialización del Servidor
+## 3. Inicialización del Servidor y Conexión
 
-Cuando el backend se inicializa y se conecta correctamente a MongoDB, se prepara el entorno para escuchar peticiones en el puerto local:
+Al iniciar el backend, se realiza la conexión a MongoDB y se inicializan las rutas.
 
 **Evidencia: Servidor corriendo y Base de Datos conectada:**
-![Terminal - Servidor Inicializado y Conectado](photos/console_server_started.jpeg)
+![Terminal - Servidor Inicializado](photos/console_server_started.jpeg)
 
 ---
 
-## 4. Flujo 1: Registro y Autenticación con Doble Factor (2FA)
+## 4. Flujo de Autenticación de Dos Factores (2FA)
 
-### Paso A: Registro de Usuario
-El flujo inicia con la creación de una cuenta en el sistema.
+### Paso A: Inicio de Sesión e Identificación de Cuenta
+El usuario accede a la pantalla de login del frontend para ingresar sus datos.
+![Frontend - Login y link de olvido](photos/frontend_login_forgot_password.jpeg)
 
-* **Método**: `POST`
-* **Ruta**: `/api/auth/registro`
-* **Evidencia en Postman:**
-  ![Postman - Registro de usuario](photos/postman_register.jpeg)
-
-### Paso B: Activación de 2FA
-Una vez registrado, el usuario puede activar o desactivar la verificación de dos factores.
-
-* **Método**: `PUT`
-* **Ruta**: `/api/auth/2fa/toggle`
-* **Evidencia en Postman:**
-  ![Postman - Activar 2FA](photos/postman_toggle_2fa_active.png)
-
-### Paso C: Intento de Inicio de Sesión (Dispara API de Brevo)
-Al loguearse con la cuenta que tiene 2FA activo, el backend generará el código OTP y lo enviará al correo vía Brevo.
-
+### Paso B: Login y requerimiento de 2FA
+Al enviar las credenciales, el backend valida que la cuenta requiere verificación y le indica al frontend que debe ingresar un código OTP.
 * **Método**: `POST`
 * **Ruta**: `/api/auth/login`
-* **Evidencia en Postman (Código Requerido):**
-  ![Postman - Login requiere 2FA](photos/postman_login_2fa_required.jpeg)
+![Postman - Login requiere 2FA](photos/postman_login_2fa_required.png)
 
-* **Evidencia: Correo OTP Recibido en la bandeja de entrada:**
-  ![Email - Código 2FA recibido](photos/email_2fa_code.png)
+### Paso C: Recepción del Código OTP en el Correo (Enviado por Brevo)
+El usuario recibe en su bandeja de entrada el correo electrónico con el código numérico de acceso.
+![Email - Código 2FA Recibido](photos/email_2fa_code.png)
 
-### Paso D: Verificación de Código 2FA (Login Completo)
-El usuario ingresa el código numérico recibido en su correo para terminar de autenticarse de forma segura.
+### Paso D: Pantalla de Verificación en el Frontend
+La interfaz del frontend solicita al usuario que ingrese el código OTP que acaba de recibir por correo.
+![Frontend - Pantalla de Código 2FA](photos/frontend_2fa_verification.jpeg)
 
+### Paso E: Verificación del Código OTP
+Se envía el código recibido para completar el proceso de inicio de sesión y obtener el token JWT de acceso definitivo.
 * **Método**: `POST`
 * **Ruta**: `/api/auth/2fa/verificar`
-* **Evidencia en Postman:**
-  ![Postman - Verificar código 2FA](photos/postman_verify_2fa.jpeg)
-
-* **Evidencia: Logs en consola del flujo completo 2FA:**
-  ![Terminal - Logs de flujo 2FA](photos/console_logs_auth_flow.png)
+![Postman - Verificación 2FA Exitosa](photos/postman_verify_2fa_success.png)
 
 ---
 
-## 5. Flujo 2: Recuperación de Contraseña
+## 5. Flujo de Recuperación de Contraseña
 
-### Paso A: Solicitar código de recuperación (Dispara API de Brevo)
-El usuario introduce su correo electrónico para iniciar el proceso de recuperación.
+### Paso A: Pantalla de Solicitud de Recuperación en el Frontend
+El usuario que ha olvidado su contraseña ingresa su correo electrónico para iniciar el proceso de restauración.
+![Frontend - Pantalla de solicitud de recuperación](photos/frontend_recovery_request_typo.jpeg)
 
+### Paso B: Solicitud de Recuperación
+El backend procesa la petición y llama a la API de Brevo para mandar el código de recuperación si el correo electrónico existe en el sistema.
 * **Método**: `POST`
 * **Ruta**: `/api/auth/recuperar`
-* **Evidencia en Postman:**
-  ![Postman - Solicitar Recuperación](photos/postman_recovery_request.png)
+![Postman - Solicitud de Recuperación](photos/postman_recovery_request.png)
 
-* **Evidencia: Correo de recuperación recibido en bandeja de entrada:**
-  ![Email - Código de recuperación recibido](photos/email_recovery_code.png)
+### Paso C: Recepción del Correo de Recuperación (Enviado por Brevo)
+El usuario recibe en su correo el código temporal de un solo uso para restablecer su contraseña.
+![Email - Código de recuperación](photos/email_recovery_code.png)
 
-### Paso B: Verificar código de recuperación
-Se introduce el código OTP recibido para verificar que el cliente es el dueño de la cuenta y generar el token de restablecimiento.
+### Paso D: Pantalla de Ingreso de Código en el Frontend
+La interfaz del frontend le solicita al usuario que introduzca el código de seguridad de recuperación de contraseña.
+![Frontend - Pantalla de código de recuperación](photos/frontend_recovery_code_input.png)
 
+### Paso E: Verificación del Código de Recuperación
+El código introducido se valida en el servidor, retornando un `reset_token` temporal para autorizar el cambio de contraseña.
 * **Método**: `POST`
 * **Ruta**: `/api/auth/recuperar/verificar`
-* **Evidencia en Postman:**
-  ![Postman - Verificar código de recuperación](photos/postman_verify_recovery_code.png)
+![Postman - Verificación de código de recuperación](photos/postman_verify_recovery_code_success.png)
 
-### Paso C: Establecer nueva contraseña
-Con el `reset_token` obtenido, el usuario puede finalmente guardar su nueva contraseña.
-
+### Paso F: Establecer Nueva Contraseña
+Se envía la nueva contraseña junto con el `reset_token` para actualizar las credenciales de forma definitiva en la base de datos.
 * **Método**: `POST`
 * **Ruta**: `/api/auth/recuperar/cambiar`
-* **Evidencia en Postman:**
-  ![Postman - Establecer nueva contraseña](photos/postman_change_password.png)
-
-* **Evidencia: Logs en consola del flujo completo de recuperación:**
-  ![Terminal - Logs de flujo de recuperación](photos/console_logs_recovery_flow.png)
+![Postman - Cambio de contraseña exitoso](photos/postman_change_password_success.png)
 
 ---
 
-## 6. Manejo de Errores y Diagnóstico
+## 6. Evidencia de Logs en la Consola del Servidor
 
-### Error común: API Key no autorizada o no encontrada (`unauthorized`)
-Si la API Key ingresada en el archivo `.env` (`BREVO_API_KEY`) no está habilitada o fue borrada del panel de Brevo, el backend atrapará el error de axios y mostrará un diagnóstico en consola:
+Cuando los correos electrónicos se envían exitosamente a través de la integración de Brevo, el servidor imprime en consola el registro correspondiente con el ID de mensaje devuelto por la API externa:
 
-**Evidencia de log de error por API Key inválida:**
-![Terminal - Error de autenticación de Brevo](photos/console_error_brevo_unauthorized.png)
+**Evidencia de logs en consola:**
+![Terminal - Consola con logs de correos enviados](photos/console_logs_emails_sent.png)
 
 ---
 
