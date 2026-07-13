@@ -43,33 +43,153 @@ const enviarEmail = async (destinatario, asunto, html) => {
 };
 
 // ── Templates de email ────────────────────────────────────────────────────
-const templateCodigo = (codigo, tipo) => `
-  <div style="font-family:Georgia,serif;max-width:480px;margin:0 auto;background:#E8F4DC;padding:2rem;border-radius:16px;">
-    <h1 style="font-family:Georgia,serif;color:#728156;font-size:2rem;margin-bottom:0.5rem;">
-      Miga<em style="color:#88976C;">-Co</em>
-    </h1>
-    <p style="color:#88976C;font-size:0.8rem;letter-spacing:0.15em;text-transform:uppercase;margin-bottom:2rem;">
-      Pastelería artesanal
-    </p>
-    <h2 style="color:#728156;font-size:1.3rem;margin-bottom:1rem;">
-      ${tipo === '2fa' ? 'Código de verificación' : 'Recuperar contraseña'}
-    </h2>
-    <p style="color:#88976C;font-size:1rem;line-height:1.6;margin-bottom:1.5rem;">
-      ${tipo === '2fa'
-        ? 'Usa este código para completar tu inicio de sesión:'
-        : 'Ingresa este código para restablecer tu contraseña:'}
-    </p>
-    <div style="background:#728156;color:#E8F4DC;font-size:2.5rem;font-weight:700;letter-spacing:0.5rem;text-align:center;padding:1.2rem;border-radius:12px;margin-bottom:1.5rem;">
-      ${codigo}
-    </div>
-    <p style="color:#B6C99C;font-size:0.82rem;line-height:1.6;">
-      Este código expira en <strong>10 minutos</strong>. Si no solicitaste esto, ignora este correo.
-    </p>
-    <hr style="border:none;border-top:1px solid #CFE1BB;margin:1.5rem 0;">
-    <p style="color:#B6C99C;font-size:0.72rem;text-align:center;">
-      © Miga-Co · Pastelería artesanal
-    </p>
-  </div>
+// Paleta alineada al sistema de diseño del frontend:
+//   --primary:       #2D006B  (morado oscuro)
+//   --secondary:     #560BAD  (violeta medio)
+//   --accent:        #7B2CBF  (violeta claro)
+//   --neutral-light: #E9D8FD  (lavanda suave)
+// Tipografías web-safe: 'Segoe UI' / Arial (los clientes de correo no cargan Google Fonts)
+
+const templateCodigo = (codigo, tipo) => `<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${tipo === '2fa' ? 'Código de verificación' : 'Recuperar contraseña'} — Miga-Co</title>
+</head>
+<body style="margin:0;padding:0;background-color:#F3EEFF;font-family:Arial,'Helvetica Neue',Helvetica,sans-serif;">
+
+  <!-- Wrapper externo -->
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+    style="background-color:#F3EEFF;padding:40px 16px;">
+    <tr>
+      <td align="center">
+
+        <!-- Tarjeta principal -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+          style="max-width:560px;background-color:#ffffff;border-radius:20px;
+                 box-shadow:0 8px 40px rgba(45,0,107,0.12),0 2px 8px rgba(0,0,0,0.06);
+                 overflow:hidden;">
+
+          <!-- ── HEADER con gradiente morado ── -->
+          <tr>
+            <td align="center"
+              style="background:linear-gradient(135deg,#2D006B 0%,#560BAD 60%,#7B2CBF 100%);
+                     padding:36px 40px 32px;text-align:center;">
+
+              <!-- Logo -->
+              <div style="margin-bottom:6px;">
+                <span style="font-family:'Segoe UI','Trebuchet MS',Arial,sans-serif;
+                             font-size:2.4rem;font-weight:900;letter-spacing:-0.02em;
+                             color:#ffffff;line-height:1;">
+                  Miga
+                </span><span style="font-family:'Segoe UI','Trebuchet MS',Arial,sans-serif;
+                             font-size:2.4rem;font-weight:400;font-style:italic;
+                             color:#E9D8FD;line-height:1;">
+                  -Co
+                </span>
+              </div>
+
+              <!-- Tagline -->
+              <p style="margin:0;font-size:0.65rem;letter-spacing:0.25em;
+                        text-transform:uppercase;color:#C4A8F5;font-weight:600;">
+                Pastelería artesanal
+              </p>
+            </td>
+          </tr>
+
+          <!-- ── CUERPO ── -->
+          <tr>
+            <td style="padding:40px 44px 32px;">
+
+              <!-- Ícono contextual -->
+              <div style="text-align:center;margin-bottom:20px;">
+                <div style="display:inline-block;width:60px;height:60px;line-height:60px;
+                            border-radius:50%;background:#E9D8FD;font-size:1.8rem;
+                            text-align:center;">
+                  ${tipo === '2fa' ? '🔐' : '🔑'}
+                </div>
+              </div>
+
+              <!-- Título -->
+              <h1 style="margin:0 0 10px;text-align:center;
+                         font-family:'Segoe UI','Trebuchet MS',Arial,sans-serif;
+                         font-size:1.6rem;font-weight:800;color:#2D006B;line-height:1.2;">
+                ${tipo === '2fa' ? 'Código de verificación' : 'Recuperar contraseña'}
+              </h1>
+
+              <!-- Descripción -->
+              <p style="margin:0 0 28px;text-align:center;font-size:0.97rem;
+                        color:#560BAD;line-height:1.7;opacity:0.9;">
+                ${tipo === '2fa'
+                  ? 'Usa este código para completar tu inicio de sesión en <strong>Miga-Co</strong>.'
+                  : 'Ingresa este código para restablecer tu contraseña en <strong>Miga-Co</strong>.'}
+              </p>
+
+              <!-- ── CAJA DEL CÓDIGO ── -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td align="center" style="padding-bottom:28px;">
+                    <div style="display:inline-block;background:linear-gradient(135deg,#2D006B,#560BAD);
+                                border-radius:14px;padding:20px 40px;
+                                box-shadow:0 4px 20px rgba(45,0,107,0.35);">
+                      <span style="font-family:'Segoe UI','Courier New',monospace;
+                                   font-size:2.8rem;font-weight:900;
+                                   color:#ffffff;letter-spacing:0.55rem;
+                                   display:block;line-height:1;">
+                        ${codigo}
+                      </span>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- Aviso de expiración -->
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
+                <tr>
+                  <td style="background:#F3EEFF;border-radius:10px;
+                             border-left:4px solid #7B2CBF;padding:14px 18px;">
+                    <p style="margin:0;font-size:0.83rem;color:#2D006B;line-height:1.6;">
+                      ⏱ Este código expira en <strong>10 minutos</strong>.
+                      Si no solicitaste esto, puedes ignorar este correo de forma segura.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+
+            </td>
+          </tr>
+
+          <!-- ── DIVISOR ── -->
+          <tr>
+            <td style="padding:0 44px;">
+              <hr style="border:none;border-top:1px solid #E9D8FD;margin:0;" />
+            </td>
+          </tr>
+
+          <!-- ── FOOTER ── -->
+          <tr>
+            <td style="padding:24px 44px 32px;text-align:center;">
+              <p style="margin:0 0 6px;font-size:0.75rem;color:#7B2CBF;font-weight:600;
+                        letter-spacing:0.15em;text-transform:uppercase;">
+                Miga-Co · Pastelería artesanal
+              </p>
+              <p style="margin:0;font-size:0.7rem;color:#a78bca;line-height:1.5;">
+                Este es un correo automático, por favor no respondas a este mensaje.<br/>
+                © ${new Date().getFullYear()} Miga-Co. Todos los derechos reservados.
+              </p>
+            </td>
+          </tr>
+
+        </table>
+        <!-- /Tarjeta principal -->
+
+      </td>
+    </tr>
+  </table>
+
+</body>
+</html>
 `;
 
 // ── Auth Service ──────────────────────────────────────────────────────────
