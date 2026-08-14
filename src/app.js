@@ -32,7 +32,6 @@ app.use((req, res, next) => {
 });
 
 // 2. Middleware CORS standard
-// Cambios para git
 const corsOptions = {
   origin: true,
   credentials: true,
@@ -40,7 +39,6 @@ const corsOptions = {
   allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With", "Accept", "Origin"]
 };
 app.use(cors(corsOptions));
-app.options("*", cors(corsOptions));
 
 app.use(express.json());
 app.use("/uploads", express.static("uploads"));
