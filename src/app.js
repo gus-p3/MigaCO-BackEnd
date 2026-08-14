@@ -32,6 +32,7 @@ app.use((req, res, next) => {
 });
 
 // 2. Middleware CORS standard
+// Cambios para git
 const corsOptions = {
   origin: true,
   credentials: true,
