@@ -3,12 +3,16 @@ const mongoose = require('mongoose');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGODB_URI || process.env.MONGO_URI);
+    const uri = process.env.MONGODB_URI || process.env.MONGO_URI;
+    if (!uri) {
+      console.error('❌ MONGODB_URI o MONGO_URI no están configuradas en las variables de entorno');
+      return;
+    }
+    const conn = await mongoose.connect(uri);
     console.log(`✅ MongoDB Conectado: ${conn.connection.host}`);
     return conn;
   } catch (error) {
     console.error('❌ Error conectando a MongoDB:', error.message);
-    process.exit(1);
   }
 };
 
