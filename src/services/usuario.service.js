@@ -33,9 +33,8 @@ class UsuarioService {
         } 
       },
       { 
-        returnDocument: 'after',  // ✅ Nueva forma
-        runValidators: true,
-        new: false  // Opcional: eliminar si usas returnDocument
+        returnDocument: 'after',
+        runValidators: true
       }
     ).select('-password');
     
